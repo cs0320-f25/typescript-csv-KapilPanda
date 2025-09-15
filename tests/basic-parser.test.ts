@@ -86,8 +86,6 @@ test("schema test", async () => {
   type Person = z.infer<typeof PersonRowSchema>;
 
   const result = await parseCSV<Person>(PEOPLE_CSV_PATH, PersonRowSchema);
-
-  // Bob's "thirty" should fail schema validation
   if (result.success) {
     expect(result.data.every(p => typeof p.age === "number")).toBe(true);
   } else {
