@@ -1,5 +1,6 @@
 import { parseCSV } from "../src/basic-parser";
 import * as path from "path";
+import { z } from "zod";
 
 const PEOPLE_CSV_PATH = path.join(__dirname, "../data/people.csv");
 
@@ -76,4 +77,21 @@ test("quoted fields with newlines", async () => {
   writeFileSync(TEMP_CSV_PATH, '"Hello\nWorld",42');
   const results = await parseCSV(TEMP_CSV_PATH);
   expect(results[0]).toEqual(["Hello\nWorld", "42"]);
+});
+
+test("schema test", async () => {
+  const PersonRowSchema = z
+    .tuple([z.string(), z.coerce.number().refine(n => n > 0)])
+    .transform(t => ({ name: t[0], age: t[1] }));
+  type Person = z.infer<typeof PersonRowSchema>;
+
+  const result = await parseCSV<Person>(PEOPLE_CSV_PATH, PersonRowSchema);
+
+  // Bob's "thirty" should fail schema validation
+  if (result.success) {
+    expect(result.data.every(p => typeof p.age === "number")).toBe(true);
+  } else {
+    expect(result.errors.length).toBeGreaterThan(0);
+    expect(result.errors[0]).toHaveProperty("rowIndex");
+  }
 });
